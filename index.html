@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Трекер здоровья</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --bg-primary: #f5f7fa;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #e8ecf1;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #888;
+            --accent: #00b894;
+            --accent-light: rgba(0, 184, 148, 0.15);
+            --border: #ddd;
+            --shadow: rgba(0,0,0,0.08);
+            --water: #0984e3;
+            --water-light: rgba(9, 132, 227, 0.2);
+            --warning: #e17055;
+            --gold: #f39c12;
+            --modal-bg: rgba(0,0,0,0.5);
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #1a1a2e;
+            --bg-secondary: rgba(255,255,255,0.05);
+            --bg-tertiary: rgba(255,255,255,0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255,255,255,0.8);
+            --text-muted: rgba(255,255,255,0.5);
+            --accent: #00b894;
+            --accent-light: rgba(0, 184, 148, 0.2);
+            --border: rgba(255,255,255,0.1);
+            --shadow: rgba(0,0,0,0.3);
+            --water: #74b9ff;
+            --water-light: rgba(116, 185, 255, 0.2);
+            --modal-bg: rgba(0,0,0,0.7);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            min-height: 100vh;
+            color: var(--text-primary);
+            padding: 16px;
+            padding-bottom: 100px;
+            transition: background 0.3s, color 0.3s;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 8px var(--shadow);
+            transition: all 0.3s;
+        }
+        
+        .theme-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .date-nav {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 8px;
+        }
+        
+        .date-nav button {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+        
+        .date-nav button:active {
+            background: var(--bg-tertiary);
+        }
+        
+        .current-date {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .days-left {
+            font-size: 14px;
+            color: var(--gold);
+            font-weight: 500;
+        }
+        
+        .progress-bar {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            height: 24px;
+            margin: 16px 0;
+            overflow: hidden;
+            box-shadow: inset 0 2px 4px var(--shadow);
+        }
+        
+        .progress-fill {
+            background: linear-gradient(90deg, #00b894, #00cec9);
+            height: 100%;
+            border-radius: 12px;
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: #fff;
+            min-width: 40px;
+        }
+        
+        .section {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 12px var(--shadow);
+            border: 1px solid var(--border);
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .section-icon {
+            font-size: 24px;
+        }
+        
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .section-subtitle {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+            padding-left: 34px;
+            line-height: 1.4;
+        }
+        
+        .section.completed {
+            opacity: 0.7;
+            order: 10;
+        }
+        
+        .section.completed .procedures-list {
+            display: none;
+        }
+        
+        .section.completed .section-header {
+            cursor: pointer;
+        }
+        
+        .section.completed .completed-badge {
+            display: inline-flex;
+        }
+        
+        .section.completed.expanded .procedures-list {
+            display: flex;
+        }
+        
+        .completed-badge {
+            display: none;
+            background: var(--accent);
+            color: #fff;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 10px;
+            margin-left: auto;
+            font-weight: 600;
+        }
+        
+        .procedures-container {
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .section.in-progress {
+            order: 1;
+        }
+        
+        .section.analysis-section {
+            order: 20;
+        }
+        
+        .section.next-visit-section {
+            order: 30;
+        }
+        
+        .slot {
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .slot:last-child {
+            margin-bottom: 0;
+        }
+        
+        .slot-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+        }
+        
+        .checkbox {
+            width: 32px;
+            height: 32px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+            color: transparent;
+            background: var(--bg-secondary);
+        }
+        
+        .checkbox.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        
+        .slot-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        
+        .slot-details {
+            margin-top: 12px;
+            padding-left: 44px;
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.8;
+        }
+        
+        .slot-details div {
+            padding: 3px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        
+        .slot-details div:last-child {
+            border-bottom: none;
+        }
+        
+        .omega-section {
+            padding-left: 0;
+        }
+        
+        .omega-label {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+        }
+        
+        .omega-checkboxes {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .omega-cb {
+            width: 50px;
+            height: 50px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: var(--bg-secondary);
+            color: var(--text-muted);
+        }
+        
+        .omega-cb.checked {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: #fff;
+        }
+        
+        .water-section {
+            text-align: center;
+        }
+        
+        .water-goal {
+            font-size: 14px;
+            color: var(--text-muted);
+            margin-bottom: 12px;
+        }
+        
+        .water-count {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--water);
+            margin-bottom: 16px;
+        }
+        
+        .water-count span {
+            font-size: 20px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+        
+        .water-glasses {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        
+        .glass {
+            width: 44px;
+            height: 52px;
+            border: 2px solid var(--water-light);
+            border-radius: 6px 6px 12px 12px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.2s;
+            background: var(--bg-secondary);
+        }
+        
+        .glass.filled {
+            border-color: var(--water);
+        }
+        
+        .glass-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(180deg, var(--water), #0652DD);
+            height: 0;
+            transition: height 0.3s;
+        }
+        
+        .glass.filled .glass-fill {
+            height: 100%;
+        }
+        
+        .glass-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 18px;
+            z-index: 1;
+            opacity: 0.5;
+        }
+        
+        .glass.filled .glass-icon {
+            opacity: 0;
+        }
+        
+        .procedures-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        
+        .procedure-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .procedure-item:active {
+            transform: scale(0.98);
+        }
+        
+        .procedure-item .checkbox {
+            width: 28px;
+            height: 28px;
+            font-size: 14px;
+        }
+        
+        .procedure-info {
+            flex: 1;
+        }
+        
+        .procedure-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .procedure-date {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        
+        .procedure-date.completed {
+            color: var(--accent);
+        }
+        
+        .procedure-edit {
+            padding: 6px 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 12px;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+        
+        .procedure-edit:active {
+            background: var(--bg-tertiary);
+        }
+        
+        .procedure-counter {
+            font-size: 13px;
+            color: var(--gold);
+            font-weight: 600;
+        }
+        
+        .tabs {
+            display: flex;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 8px 0;
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            box-shadow: 0 -4px 20px var(--shadow);
+            z-index: 100;
+        }
+        
+        .tab {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            padding: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 11px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+        
+        .tab.active {
+            color: var(--accent);
+        }
+        
+        .tab-icon {
+            font-size: 24px;
+        }
+        
+        .page {
+            display: none;
+        }
+        
+        .page.active {
+            display: block;
+        }
+        
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 6px;
+            margin-top: 12px;
+        }
+        
+        .cal-header {
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+            padding: 8px 0;
+            font-weight: 500;
+        }
+        
+        .cal-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            border-radius: 10px;
+            cursor: pointer;
+            position: relative;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .cal-day:active {
+            transform: scale(0.9);
+        }
+        
+        .cal-day.other-month {
+            color: var(--text-muted);
+            opacity: 0.4;
+        }
+        
+        .cal-day.today {
+            background: var(--accent-light);
+            color: var(--accent);
+            font-weight: 700;
+        }
+        
+        .cal-day.selected {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        .cal-day.has-data::after {
+            content: '';
+            position: absolute;
+            bottom: 4px;
+            width: 6px;
+            height: 6px;
+            background: var(--gold);
+            border-radius: 50%;
+        }
+        
+        .cal-day.complete::after {
+            background: var(--accent);
+        }
+        
+        .month-nav {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .month-nav button {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+        }
+        
+        .month-name {
+            font-size: 17px;
+            font-weight: 600;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 16px;
+        }
+        
+        .stat-card {
+            background: var(--bg-tertiary);
+            border-radius: 14px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+        
+        .reminder-card {
+            background: linear-gradient(135deg, #e17055, #d63031);
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 16px;
+            color: #fff;
+        }
+        
+        .reminder-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        
+        .reminder-text {
+            font-size: 14px;
+            opacity: 0.95;
+            line-height: 1.5;
+        }
+        
+        .analysis-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px;
+            background: var(--bg-tertiary);
+            border-radius: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .analysis-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .analysis-icon {
+            font-size: 28px;
+        }
+        
+        .analysis-info {
+            flex: 1;
+        }
+        
+        .analysis-name {
+            font-size: 15px;
+            font-weight: 500;
+        }
+        
+        .analysis-when {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+        
+        .next-visit {
+            background: linear-gradient(135deg, var(--accent), #00cec9);
+            border-radius: 14px;
+            padding: 16px;
+            margin-top: 16px;
+            color: #fff;
+            text-align: center;
+        }
+        
+        .next-visit-title {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 4px;
+        }
+        
+        .next-visit-date {
+            font-size: 18px;
+            font-weight: 700;
+        }
+        
+        /* Модальное окно */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--modal-bg);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .modal {
+            background: var(--bg-secondary);
+            border-radius: 20px;
+            padding: 24px;
+            width: 100%;
+            max-width: 320px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .modal-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        .modal-input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            font-size: 16px;
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            margin-bottom: 16px;
+        }
+        
+        .modal-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .modal-btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .modal-btn.cancel {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+        }
+        
+        .modal-btn.confirm {
+            background: var(--accent);
+            color: #fff;
+        }
+        
+        .modal-btn.delete {
+            background: var(--warning);
+            color: #fff;
+        }
+        
+        .modal-btn:active {
+            transform: scale(0.97);
+        }
+    </style>
+</head>
+<body>
+    <!-- Страница: Сегодня -->
+    <div id="page-today" class="page active">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+            <h1>💊 Трекер здоровья</h1>
+            <div class="date-nav">
+                <button onclick="changeDate(-1)">‹</button>
+                <span class="current-date" id="currentDate">26 декабря</span>
+                <button onclick="changeDate(1)">›</button>
+            </div>
+            <div class="days-left" id="daysLeft">Осталось 60 дней курса</div>
+        </div>
+        
+        <div class="progress-bar">
+            <div class="progress-fill" id="dayProgress" style="width: 0%">0%</div>
+        </div>
+        
+        <!-- Утро -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">🌅</span>
+                <span class="section-title">Утро</span>
+            </div>
+            <div class="slot">
+                <div class="slot-header" onclick="toggleSlot('morning')">
+                    <div class="checkbox" id="cb-morning">✓</div>
+                    <span class="slot-title">Утренний приём (с завтраком)</span>
+                </div>
+                <div class="slot-details">
+                    <div>☀️ Витамин D 10.000 МЕ — 1 капс.</div>
+                    <div>💛 Альфа Д3 1 мкг — 1 капс.</div>
+                    <div>🟠 Омега-3 — 1 капс.</div>
+                    <div>💚 Фолацин 5 мг — 1 табл.</div>
+                    <div>💙 Магне В6 Форте — 1 табл.</div>
+                    <div>🟣 В-комплекс — ½ пипетки</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- День -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">☀️</span>
+                <span class="section-title">День</span>
+            </div>
+            <div class="slot">
+                <div class="omega-section">
+                    <div class="omega-label">🟠 Омега-3 — по 1 капсуле (всего 3 в течение дня)</div>
+                    <div class="omega-checkboxes">
+                        <div class="omega-cb" id="cb-omega1" onclick="toggleOmega(1)">1</div>
+                        <div class="omega-cb" id="cb-omega2" onclick="toggleOmega(2)">2</div>
+                        <div class="omega-cb" id="cb-omega3" onclick="toggleOmega(3)">3</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Вечер -->
+        <div class="section">
+            <div class="section-header">
+                <span class="section-icon">🌙</span>
+                <span class="section-title">Вечер</span>
+            </div>
+            <div class="slot">
+                <div class="slot-header" onclick="toggleSlot('evening')">
+                    <div class="checkbox" id="cb-evening">✓</div>
+                    <span class="slot-title">Вечерний приём (на ночь)</span>
+                </div>
+                <div class="slot-details">
+                    <div>💙 Магне В6 Форте — 1 табл.</div>
+                    <div>🔴 Утрожестан 100 мг — 1 капс.</div>
+                    <div>🟡 Аевит — 1 капс.</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Вода -->
+        <div class="section water-section">
+            <div class="section-header" style="justify-content: center;">
+                <span class="section-icon">💧</span>
+                <span class="section-title">Вода</span>
+            </div>
+            <div class="water-goal">Цель: 2.5 — 3 литра в день</div>
+            <div class="water-count" id="waterDisplay">0 <span>/ 10</span></div>
+            <div class="water-glasses" id="waterGlasses"></div>
+        </div>
+    </div>
+    
+    <!-- Страница: Процедуры -->
+    <div id="page-procedures" class="page">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn2">🌙</button>
+            <h1>💉 Процедуры</h1>
+        </div>
+        
+        <!-- Тиоктацид -->
+        <div class="procedures-container">
+        <div class="section in-progress" id="section-tioctacid">
+            <div class="section-header" onclick="toggleCompletedSection('tioctacid')">
+                <span class="section-icon">💉</span>
+                <span class="section-title">Тиоктацид 600 мг</span>
+                <span class="completed-badge">✓ Завершено</span>
+            </div>
+            <div class="section-subtitle">Антиоксидант — снижает воспаление (СРБ), готовит организм к терапии железом, помогает при инсулинорезистентности</div>
+            <div class="procedure-counter" style="margin-bottom: 8px;">
+                <span id="tioctacid-count">0</span>/5 капельниц • 5 дней подряд
+            </div>
+            <div class="progress-bar" style="margin-bottom: 12px; height: 20px;">
+                <div class="progress-fill" id="tioctacid-progress" style="width: 0%">0%</div>
+            </div>
+            <div class="procedures-list" id="tioctacid-list"></div>
+        </div>
+        
+        <!-- Железо -->
+        <div class="section in-progress" id="section-iron">
+            <div class="section-header" onclick="toggleCompletedSection('iron')">
+                <span class="section-icon">🩸</span>
+                <span class="section-title">Венофер / Ликферр</span>
+                <span class="completed-badge">✓ Завершено</span>
+            </div>
+            <div class="section-subtitle">Внутривенное железо — поднять ферритин с 90 до 185+, устранить латентный дефицит железа, убрать ночную гипогликемию и тревожность</div>
+            <div class="procedure-counter" style="margin-bottom: 8px;">
+                <span id="iron-count">0</span>/5 капельниц • 1 раз в неделю
+            </div>
+            <div class="progress-bar" style="margin-bottom: 12px; height: 20px;">
+                <div class="progress-fill" id="iron-progress" style="width: 0%">0%</div>
+            </div>
+            <div class="procedures-list" id="iron-list"></div>
+        </div>
+        
+        <!-- Нейромультивит -->
+        <div class="section in-progress" id="section-neuro">
+            <div class="section-header" onclick="toggleCompletedSection('neuro')">
+                <span class="section-icon">💊</span>
+                <span class="section-title">Нейромультивит 2 мл</span>
+                <span class="completed-badge">✓ Завершено</span>
+            </div>
+            <div class="section-subtitle">Витамины группы B (B1, B6, B12) — для нервной системы, энергии, снижения гомоцистеина</div>
+            <div class="procedure-counter" style="margin-bottom: 8px;">
+                <span id="neuro-count">0</span>/10 уколов • 2 раза в неделю
+            </div>
+            <div class="progress-bar" style="margin-bottom: 12px; height: 20px;">
+                <div class="progress-fill" id="neuro-progress" style="width: 0%">0%</div>
+            </div>
+            <div class="procedures-list" id="neuro-list"></div>
+        </div>
+        
+        <!-- Анализы -->
+        <div class="section analysis-section">
+            <div class="section-header">
+                <span class="section-icon">🔬</span>
+                <span class="section-title">Контрольные анализы</span>
+            </div>
+            <div class="analysis-item">
+                <span class="analysis-icon">🧪</span>
+                <div class="analysis-info">
+                    <div class="analysis-name">СРБ, АСТ, АЛТ</div>
+                    <div class="analysis-when">После 5-й капельницы Тиоктацида</div>
+                </div>
+            </div>
+            <div class="analysis-item">
+                <span class="analysis-icon">🩸</span>
+                <div class="analysis-info">
+                    <div class="analysis-name">ОАК</div>
+                    <div class="analysis-when">Через 3 недели после курса железа</div>
+                </div>
+            </div>
+            <div class="analysis-item">
+                <span class="analysis-icon">🦴</span>
+                <div class="analysis-info">
+                    <div class="analysis-name">Денситометрия</div>
+                    <div class="analysis-when">По возможности (оценка плотности костей)</div>
+                </div>
+            </div>
+        </div>
+        </div>
+        
+        <div class="next-visit next-visit-section">
+            <div class="next-visit-title">📅 Следующий приём у врача</div>
+            <div class="next-visit-date">Конец февраля 2026</div>
+        </div>
+    </div>
+    
+    <!-- Страница: Календарь -->
+    <div id="page-calendar" class="page">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn3">🌙</button>
+            <h1>📅 Календарь</h1>
+        </div>
+        
+        <div class="section">
+            <div class="month-nav">
+                <button onclick="changeMonth(-1)">‹</button>
+                <span class="month-name" id="monthName">Декабрь 2025</span>
+                <button onclick="changeMonth(1)">›</button>
+            </div>
+            <div class="calendar" id="calendar">
+                <div class="cal-header">Пн</div>
+                <div class="cal-header">Вт</div>
+                <div class="cal-header">Ср</div>
+                <div class="cal-header">Чт</div>
+                <div class="cal-header">Пт</div>
+                <div class="cal-header">Сб</div>
+                <div class="cal-header">Вс</div>
+            </div>
+        </div>
+        
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="stat-days">0</div>
+                <div class="stat-label">Дней выполнено</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-percent">0%</div>
+                <div class="stat-label">Успешность</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-streak">0</div>
+                <div class="stat-label">Дней подряд</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="stat-water">0л</div>
+                <div class="stat-label">Выпито воды</div>
+            </div>
+        </div>
+        
+        <div class="reminder-card">
+            <div class="reminder-title">⚠️ Докупить через ~25-30 дней:</div>
+            <div class="reminder-text">Омега-3, Альфа Д3, Фолацин, Аевит, Утрожестан, Магне В6, Витамин D</div>
+        </div>
+    </div>
+    
+    <!-- Модальное окно для выбора даты -->
+    <div class="modal-overlay" id="dateModal">
+        <div class="modal">
+            <div class="modal-title" id="modalTitle">Выберите дату</div>
+            <input type="date" class="modal-input" id="modalDateInput">
+            <div class="modal-buttons">
+                <button class="modal-btn cancel" onclick="closeModal()">Отмена</button>
+                <button class="modal-btn delete" id="modalDeleteBtn" onclick="deleteProcedure()">Удалить</button>
+                <button class="modal-btn confirm" onclick="saveProcedureDate()">Сохранить</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Табы -->
+    <div class="tabs">
+        <div class="tab active" onclick="showPage('today', this)">
+            <span class="tab-icon">💊</span>
+            <span>Сегодня</span>
+        </div>
+        <div class="tab" onclick="showPage('procedures', this)">
+            <span class="tab-icon">💉</span>
+            <span>Процедуры</span>
+        </div>
+        <div class="tab" onclick="showPage('calendar', this)">
+            <span class="tab-icon">📅</span>
+            <span>Календарь</span>
+        </div>
+    </div>
+
+    <script>
+        // Константы
+        const COURSE_START = new Date(2025, 11, 23);
+        const COURSE_END = new Date(2026, 1, 23);
+        
+        // Состояние
+        let currentDate = new Date();
+        let currentMonth = new Date();
+        let data = JSON.parse(localStorage.getItem('healthTracker') || '{}');
+        let currentEditProcedure = null;
+        
+        // Тема
+        function initTheme() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeButtons(savedTheme);
+        }
+        
+        function toggleTheme() {
+            const current = document.documentElement.getAttribute('data-theme');
+            const newTheme = current === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+            updateThemeButtons(newTheme);
+        }
+        
+        function updateThemeButtons(theme) {
+            const icon = theme === 'dark' ? '☀️' : '🌙';
+            document.querySelectorAll('.theme-toggle').forEach(btn => btn.textContent = icon);
+        }
+        
+        // Инициализация
+        function init() {
+            initTheme();
+            renderWaterGlasses();
+            renderProcedures();
+            loadDayData();
+            updateProgress();
+            renderCalendar();
+            updateStats();
+        }
+        
+        // Навигация по страницам
+        function showPage(page, tab) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById('page-' + page).classList.add('active');
+            if (tab) tab.classList.add('active');
+            
+            if (page === 'calendar') {
+                renderCalendar();
+                updateStats();
+            }
+        }
+        
+        // Форматирование даты
+        function formatDate(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        function formatDateRu(date) {
+            const months = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 
+                          'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'];
+            return date.getDate() + ' ' + months[date.getMonth()];
+        }
+        
+        function formatDateForInput(date) {
+            return date.toISOString().split('T')[0];
+        }
+        
+        function parseDateFromInput(str) {
+            const [year, month, day] = str.split('-');
+            return new Date(year, month - 1, day);
+        }
+        
+        // Навигация по датам
+        function changeDate(delta) {
+            currentDate.setDate(currentDate.getDate() + delta);
+            loadDayData();
+            updateProgress();
+        }
+        
+        // Загрузка данных дня
+        function loadDayData() {
+            const key = formatDate(currentDate);
+            const dayData = data[key] || {};
+            
+            document.getElementById('currentDate').textContent = formatDateRu(currentDate);
+            
+            const daysLeft = Math.ceil((COURSE_END - currentDate) / (1000 * 60 * 60 * 24));
+            document.getElementById('daysLeft').textContent = 
+                daysLeft > 0 ? `Осталось ${daysLeft} дней курса` : 'Курс завершён 🎉';
+            
+            updateCheckbox('morning', dayData.morning);
+            updateCheckbox('evening', dayData.evening);
+            
+            for (let i = 1; i <= 3; i++) {
+                const cb = document.getElementById('cb-omega' + i);
+                cb.classList.toggle('checked', dayData['omega' + i] || false);
+            }
+            
+            const waterCount = dayData.water || 0;
+            document.getElementById('waterDisplay').innerHTML = waterCount + ' <span>/ 10</span>';
+            document.querySelectorAll('.glass').forEach((g, i) => {
+                g.classList.toggle('filled', i < waterCount);
+            });
+        }
+        
+        function saveData() {
+            localStorage.setItem('healthTracker', JSON.stringify(data));
+        }
+        
+        function getDayData() {
+            const key = formatDate(currentDate);
+            if (!data[key]) data[key] = {};
+            return data[key];
+        }
+        
+        function updateCheckbox(id, checked) {
+            const cb = document.getElementById('cb-' + id);
+            cb.classList.toggle('checked', checked || false);
+        }
+        
+        function toggleSlot(slot) {
+            const dayData = getDayData();
+            dayData[slot] = !dayData[slot];
+            updateCheckbox(slot, dayData[slot]);
+            saveData();
+            updateProgress();
+        }
+        
+        function toggleOmega(num) {
+            const dayData = getDayData();
+            dayData['omega' + num] = !dayData['omega' + num];
+            document.getElementById('cb-omega' + num).classList.toggle('checked', dayData['omega' + num]);
+            saveData();
+            updateProgress();
+        }
+        
+        function updateProgress() {
+            const dayData = getDayData();
+            let completed = 0;
+            const total = 5;
+            
+            if (dayData.morning) completed++;
+            if (dayData.evening) completed++;
+            if (dayData.omega1) completed++;
+            if (dayData.omega2) completed++;
+            if (dayData.omega3) completed++;
+            
+            const percent = Math.round((completed / total) * 100);
+            const progressEl = document.getElementById('dayProgress');
+            progressEl.style.width = Math.max(percent, 8) + '%';
+            progressEl.textContent = percent + '%';
+        }
+        
+        // Вода
+        function renderWaterGlasses() {
+            const container = document.getElementById('waterGlasses');
+            container.innerHTML = '';
+            for (let i = 0; i < 10; i++) {
+                const glass = document.createElement('div');
+                glass.className = 'glass';
+                glass.innerHTML = '<div class="glass-fill"></div><span class="glass-icon">💧</span>';
+                glass.onclick = () => toggleWater(i);
+                container.appendChild(glass);
+            }
+        }
+        
+        function toggleWater(index) {
+            const dayData = getDayData();
+            const currentWater = dayData.water || 0;
+            
+            dayData.water = (index < currentWater) ? index : index + 1;
+            
+            document.getElementById('waterDisplay').innerHTML = dayData.water + ' <span>/ 10</span>';
+            document.querySelectorAll('.glass').forEach((g, i) => {
+                g.classList.toggle('filled', i < dayData.water);
+            });
+            
+            saveData();
+        }
+        
+        // Процедуры
+        function renderProcedures() {
+            renderProcedureList('tioctacid', 5, 'Капельница');
+            renderProcedureList('iron', 5, 'Капельница');
+            renderProcedureList('neuro', 10, 'Укол');
+        }
+        
+        function renderProcedureList(type, count, label) {
+            const container = document.getElementById(type + '-list');
+            container.innerHTML = '';
+            
+            const procedures = data.procedures || {};
+            const typeData = procedures[type] || [];
+            
+            for (let i = 0; i < count; i++) {
+                const item = document.createElement('div');
+                item.className = 'procedure-item';
+                
+                const done = typeData[i];
+                const dateDisplay = done ? formatDateRu(new Date(done)) : 'Не выполнено';
+                
+                item.innerHTML = `
+                    <div class="checkbox ${done ? 'checked' : ''}" onclick="quickToggleProcedure('${type}', ${i}, event)">✓</div>
+                    <div class="procedure-info" onclick="openDateModal('${type}', ${i})">
+                        <div class="procedure-name">${label} #${i + 1}</div>
+                        <div class="procedure-date ${done ? 'completed' : ''}">${dateDisplay}</div>
+                    </div>
+                    ${done ? `<button class="procedure-edit" onclick="openDateModal('${type}', ${i})">✏️</button>` : ''}
+                `;
+                container.appendChild(item);
+            }
+            
+            const completedCount = typeData.filter(d => d).length;
+            document.getElementById(type + '-count').textContent = completedCount;
+            
+            // Обновляем прогресс-бар
+            const percent = Math.round((completedCount / count) * 100);
+            const progressEl = document.getElementById(type + '-progress');
+            progressEl.style.width = Math.max(percent, 8) + '%';
+            progressEl.textContent = percent + '%';
+            
+            // Проверяем, завершена ли секция
+            const sectionEl = document.getElementById('section-' + type);
+            if (completedCount === count) {
+                sectionEl.classList.add('completed');
+                sectionEl.classList.remove('in-progress');
+            } else {
+                sectionEl.classList.remove('completed');
+                sectionEl.classList.add('in-progress');
+            }
+        }
+        
+        function toggleCompletedSection(type) {
+            const sectionEl = document.getElementById('section-' + type);
+            if (sectionEl.classList.contains('completed')) {
+                sectionEl.classList.toggle('expanded');
+            }
+        }
+        
+        function quickToggleProcedure(type, index, event) {
+            event.stopPropagation();
+            
+            if (!data.procedures) data.procedures = {};
+            if (!data.procedures[type]) data.procedures[type] = [];
+            
+            if (data.procedures[type][index]) {
+                // Если уже есть - открываем модал для редактирования
+                openDateModal(type, index);
+            } else {
+                // Если нет - ставим сегодняшнюю дату
+                data.procedures[type][index] = formatDate(new Date());
+                saveData();
+                renderProcedures();
+            }
+        }
+        
+        function openDateModal(type, index) {
+            currentEditProcedure = { type, index };
+            
+            const procedures = data.procedures || {};
+            const typeData = procedures[type] || [];
+            const currentValue = typeData[index];
+            
+            const labels = {
+                tioctacid: 'Тиоктацид',
+                iron: 'Венофер/Ликферр',
+                neuro: 'Нейромультивит'
+            };
+            
+            document.getElementById('modalTitle').textContent = `${labels[type]} #${index + 1}`;
+            document.getElementById('modalDateInput').value = currentValue || formatDateForInput(new Date());
+            document.getElementById('modalDeleteBtn').style.display = currentValue ? 'block' : 'none';
+            
+            document.getElementById('dateModal').classList.add('active');
+        }
+        
+        function closeModal() {
+            document.getElementById('dateModal').classList.remove('active');
+            currentEditProcedure = null;
+        }
+        
+        function saveProcedureDate() {
+            if (!currentEditProcedure) return;
+            
+            const { type, index } = currentEditProcedure;
+            const dateValue = document.getElementById('modalDateInput').value;
+            
+            if (!data.procedures) data.procedures = {};
+            if (!data.procedures[type]) data.procedures[type] = [];
+            
+            data.procedures[type][index] = dateValue;
+            
+            saveData();
+            renderProcedures();
+            closeModal();
+        }
+        
+        function deleteProcedure() {
+            if (!currentEditProcedure) return;
+            
+            const { type, index } = currentEditProcedure;
+            
+            if (data.procedures && data.procedures[type]) {
+                data.procedures[type][index] = null;
+            }
+            
+            saveData();
+            renderProcedures();
+            closeModal();
+        }
+        
+        // Календарь
+        function changeMonth(delta) {
+            currentMonth.setMonth(currentMonth.getMonth() + delta);
+            renderCalendar();
+        }
+        
+        function renderCalendar() {
+            const monthNames = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                              'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'];
+            
+            document.getElementById('monthName').textContent = 
+                monthNames[currentMonth.getMonth()] + ' ' + currentMonth.getFullYear();
+            
+            const calendar = document.getElementById('calendar');
+            calendar.querySelectorAll('.cal-day').forEach(d => d.remove());
+            
+            const year = currentMonth.getFullYear();
+            const month = currentMonth.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            
+            let startDay = firstDay.getDay() - 1;
+            if (startDay < 0) startDay = 6;
+            
+            const today = new Date();
+            const prevLastDay = new Date(year, month, 0).getDate();
+            
+            for (let i = startDay - 1; i >= 0; i--) {
+                const day = document.createElement('div');
+                day.className = 'cal-day other-month';
+                day.textContent = prevLastDay - i;
+                calendar.appendChild(day);
+            }
+            
+            for (let i = 1; i <= lastDay.getDate(); i++) {
+                const day = document.createElement('div');
+                day.className = 'cal-day';
+                day.textContent = i;
+                
+                const date = new Date(year, month, i);
+                const key = formatDate(date);
+                
+                if (date.toDateString() === today.toDateString()) {
+                    day.classList.add('today');
+                }
+                
+                if (date.toDateString() === currentDate.toDateString()) {
+                    day.classList.add('selected');
+                }
+                
+                if (data[key]) {
+                    const d = data[key];
+                    const complete = d.morning && d.evening && d.omega1 && d.omega2 && d.omega3;
+                    day.classList.add('has-data');
+                    if (complete) day.classList.add('complete');
+                }
+                
+                day.onclick = () => {
+                    currentDate = new Date(year, month, i);
+                    loadDayData();
+                    updateProgress();
+                    showPage('today', document.querySelector('.tab'));
+                };
+                
+                calendar.appendChild(day);
+            }
+            
+            const totalDays = calendar.querySelectorAll('.cal-day').length;
+            const remaining = 42 - totalDays;
+            for (let i = 1; i <= remaining; i++) {
+                const day = document.createElement('div');
+                day.className = 'cal-day other-month';
+                day.textContent = i;
+                calendar.appendChild(day);
+            }
+        }
+        
+        // Статистика
+        function updateStats() {
+            let completeDays = 0;
+            let totalDays = 0;
+            let totalWater = 0;
+            let streak = 0;
+            let currentStreak = 0;
+            
+            const today = new Date();
+            const checkDate = new Date(COURSE_START);
+            
+            while (checkDate <= today && checkDate <= COURSE_END) {
+                const key = formatDate(checkDate);
+                totalDays++;
+                
+                if (data[key]) {
+                    const d = data[key];
+                    const complete = d.morning && d.evening && d.omega1 && d.omega2 && d.omega3;
+                    if (complete) {
+                        completeDays++;
+                        currentStreak++;
+                        if (currentStreak > streak) streak = currentStreak;
+                    } else {
+                        currentStreak = 0;
+                    }
+                    totalWater += (d.water || 0) * 0.25;
+                } else {
+                    currentStreak = 0;
+                }
+                
+                checkDate.setDate(checkDate.getDate() + 1);
+            }
+            
+            document.getElementById('stat-days').textContent = completeDays;
+            document.getElementById('stat-percent').textContent = 
+                totalDays > 0 ? Math.round((completeDays / totalDays) * 100) + '%' : '0%';
+            document.getElementById('stat-streak').textContent = streak;
+            document.getElementById('stat-water').textContent = totalWater.toFixed(1) + 'л';
+        }
+        
+        // Закрытие модала по клику вне его
+        document.getElementById('dateModal').addEventListener('click', function(e) {
+            if (e.target === this) closeModal();
+        });
+        
+        init();
+    </script>
+</body>
+</html>
